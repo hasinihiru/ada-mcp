@@ -248,7 +248,7 @@ class AdaClient {
     endTime = ""
   ) {
     const finalSenderId = senderId || process.env.ADA_DEFAULT_SENDER_ID;
-    const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
+    const finalChannel = channel || process.env.ADA_DEFAULT_DATA_CHANNEL || "55";
 
     let finalEndTime = endTime;
     if (!finalEndTime) {
@@ -281,7 +281,7 @@ class AdaClient {
     startTime = ""
   ) {
     const finalSenderId = senderId || process.env.ADA_DEFAULT_SENDER_ID;
-    const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
+    const finalChannel = channel || process.env.ADA_DEFAULT_DATA_CHANNEL || "55";
 
     const now = new Date();
     let finalStartTime = startTime;
