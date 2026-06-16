@@ -61,7 +61,8 @@ export function formatSmsResponse(toolName, apiResult, context = {}) {
     return formatApiErrorResponse(toolName, apiResult);
   }
 
-  const campaignId = extractCampaignId(apiResult);
+  const campId = apiResult?.camp_id || apiResult?.campaign_id || apiResult?.campaignId || apiResult?.id || null;
+  const refId = apiResult?.ref_id || apiResult?.reference_id || apiResult?.referenceId || null;
   const lines = [];
 
   lines.push(`✅ SMS ${_friendlyToolAction(toolName)} — Success`);
@@ -80,8 +81,11 @@ export function formatSmsResponse(toolName, apiResult, context = {}) {
         : context.messagePreview;
     lines.push(`💬 Message: "${preview}"`);
   }
-  if (campaignId) {
-    lines.push(`🆔 Campaign ID: ${campaignId}`);
+  if (campId) {
+    lines.push(`🆔 Campaign ID: ${campId}`);
+  }
+  if (refId) {
+    lines.push(`🔑 Reference ID: ${refId}`);
   }
   if (context.channel) {
     lines.push(`📡 Channel: ${context.channel}`);
@@ -99,9 +103,10 @@ export function formatSmsResponse(toolName, apiResult, context = {}) {
   // Next steps
   lines.push("");
   lines.push("📋 Next Steps:");
-  if (campaignId) {
+  const trackingId = refId || campId;
+  if (trackingId) {
     lines.push(
-      `   • Track delivery: use get_delivery_status with campaign ID "${campaignId}"`
+      `   • Track delivery: use get_delivery_status with campaign ID "${trackingId}"`
     );
   }
   lines.push("   • Send another message using any of the SMS tools");
@@ -162,8 +167,14 @@ export function formatDeliveryStatusResponse(apiResult) {
   lines.push("📊 Delivery Status Report");
   lines.push(divider());
 
-  if (apiResult?.campaign_id || apiResult?.campaignId) {
-    lines.push(`🆔 Campaign ID: ${apiResult.campaign_id || apiResult.campaignId}`);
+  const campId = apiResult?.camp_id || apiResult?.campaign_id || apiResult?.campaignId || null;
+  const refId = apiResult?.ref_id || apiResult?.reference_id || apiResult?.referenceId || null;
+
+  if (campId) {
+    lines.push(`🆔 Campaign ID: ${campId}`);
+  }
+  if (refId) {
+    lines.push(`🔑 Reference ID: ${refId}`);
   }
 
   if (apiResult?.status) {
