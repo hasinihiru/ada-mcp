@@ -1,0 +1,19 @@
+{
+    "name": "ada-digital-reach-mcp-server",
+    "version": "1.0.0",
+    "description": "Real MCP Server for ADA Digital Reach SMS APIs",
+    "main": "src/index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "node --watch src/index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.0.0",
+        "axios": "^1.12.2",
+        "dotenv": "^16.0.3"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.0"
+    }
+}
