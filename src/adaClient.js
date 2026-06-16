@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { normalizePhoneNumber } from "./validators.js";
+import { getErrorEntry, isAuthError, isWalletError } from "./errorCodes.js";
 
 dotenv.config();
 
@@ -61,16 +63,20 @@ class AdaClient {
     return this.token;
   }
 
+  /**
+   * Core HTTP request method with automatic auth retry and
+   * rich error mapping via the error code registry.
+   */
   async _request(method, url, data = null, params = null) {
     let isRetry = false;
-    
+
     while (true) {
       const token = await this.getToken();
       const fullUrl = this._buildUrl(url);
-      const config = { 
-        method, 
+      const config = {
+        method,
         url: fullUrl,
-        headers: { Authorization: token }
+        headers: { Authorization: token },
       };
 
       if (data) config.data = data;
@@ -91,23 +97,29 @@ class AdaClient {
         if (errVal !== undefined && errVal !== "0" && errVal !== 0) {
           const responseCode = parseInt(errVal, 10);
 
-          if (responseCode === 104 || responseCode === 105) {
+          // Auto-retry on auth errors (104/105)
+          if (isAuthError(responseCode)) {
             if (!isRetry) {
               this.token = null;
               await this.getToken(true);
               isRetry = true;
               continue;
             }
-            throw new Error(`Authentication failed with code ${responseCode}: Invalid/Expired token after retry`);
-          }
-
-          if (responseCode === 114 || responseCode === 115) {
+            const entry = getErrorEntry(responseCode);
             throw new Error(
-              `Wallet issue (${responseCode}): Stop and alert. Please check your account balance.`
+              `${entry.message} Re-authentication also failed. ${entry.action}`
             );
           }
 
-          throw new Error(`ADA API Error (${responseCode}): Request failed.`);
+          // Wallet errors — critical, surface immediately
+          if (isWalletError(responseCode)) {
+            const entry = getErrorEntry(responseCode);
+            throw new Error(`${entry.message} ${entry.action}`);
+          }
+
+          // All other API errors — use the error registry
+          const entry = getErrorEntry(responseCode);
+          throw new Error(`${entry.message} ${entry.action}`);
         }
 
         return response.data;
@@ -123,18 +135,17 @@ class AdaClient {
         const errVal = error.response?.data?.error;
         if (errVal !== undefined) {
           const code = parseInt(errVal, 10);
-          
-          if (!isRetry && (code === 104 || code === 105)) {
-            this.token = null; 
+
+          if (!isRetry && isAuthError(code)) {
+            this.token = null;
             await this.getToken(true);
             isRetry = true;
             continue;
           }
 
-          if (code === 114 || code === 115) {
-            throw new Error(
-              `Wallet issue (${code}): Stop and alert. Please check your account balance. ${error.message}`
-            );
+          if (isWalletError(code)) {
+            const entry = getErrorEntry(code);
+            throw new Error(`${entry.message} ${entry.action}`);
           }
         }
 
@@ -152,7 +163,34 @@ class AdaClient {
     )}`;
   }
 
-  async sendSingleSms(phoneNumber, message, senderId, channel, callbackUrl = "") {
+  /**
+   * Normalize a single phone number using the validators module.
+   * Returns the normalized value and logs if a conversion happened.
+   */
+  _normalizePhone(raw) {
+    const result = normalizePhoneNumber(raw);
+    if (result.normalized) {
+      logToFile(
+        `[ADA Client] Phone normalized: "${result.original}" → "${result.value}"`
+      );
+    }
+    return result.value;
+  }
+
+  /**
+   * Normalize an array of phone numbers.
+   */
+  _normalizePhones(rawArray) {
+    return rawArray.map((num) => this._normalizePhone(num));
+  }
+
+  async sendSingleSms(
+    phoneNumber,
+    message,
+    senderId,
+    channel,
+    callbackUrl = ""
+  ) {
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -160,7 +198,7 @@ class AdaClient {
     const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
 
     const payload = {
-      msisdn: phoneNumber,
+      msisdn: this._normalizePhone(phoneNumber),
       channel: String(finalChannel),
       mt_port: finalSenderId,
       s_time: this._getFormattedDate(now),
@@ -173,7 +211,13 @@ class AdaClient {
     return this._request("post", smsUrl, payload);
   }
 
-  async sendBulkSms(phoneNumbers, message, senderId, channel, callbackUrl = "") {
+  async sendBulkSms(
+    phoneNumbers,
+    message,
+    senderId,
+    channel,
+    callbackUrl = ""
+  ) {
     const now = new Date();
     const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
@@ -181,7 +225,7 @@ class AdaClient {
     const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
 
     const payload = {
-      msisdn: phoneNumbers,
+      msisdn: this._normalizePhones(phoneNumbers),
       channel: String(finalChannel),
       mt_port: finalSenderId,
       s_time: this._getFormattedDate(now),
@@ -190,11 +234,19 @@ class AdaClient {
       callback_url: callbackUrl || ".",
     };
 
-    const bulkUrl = process.env.ADA_BULK_SMS_URL || "/sms-campaign/send-bulk-sms";
+    const bulkUrl =
+      process.env.ADA_BULK_SMS_URL || "/sms-campaign/send-bulk-sms";
     return this._request("post", bulkUrl, payload);
   }
 
-  async sendDataBulkSms(phoneNumbers, message, senderId, channel, callbackUrl = "", endTime = "") {
+  async sendDataBulkSms(
+    phoneNumbers,
+    message,
+    senderId,
+    channel,
+    callbackUrl = "",
+    endTime = ""
+  ) {
     const finalSenderId = senderId || process.env.ADA_DEFAULT_SENDER_ID;
     const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
 
@@ -206,7 +258,7 @@ class AdaClient {
     }
 
     const payload = {
-      msisdn: phoneNumbers,
+      msisdn: this._normalizePhones(phoneNumbers),
       channel: String(finalChannel),
       mt_port: finalSenderId,
       e_time: finalEndTime,
@@ -214,11 +266,20 @@ class AdaClient {
       callback_url: callbackUrl || ".",
     };
 
-    const dataBulkUrl = process.env.ADA_DATA_BULK_SMS_URL || "/sms-campaign/data/send-bulk-sms";
+    const dataBulkUrl =
+      process.env.ADA_DATA_BULK_SMS_URL || "/sms-campaign/data/send-bulk-sms";
     return this._request("post", dataBulkUrl, payload);
   }
 
-  async sendDataSms(phoneNumber, message, senderId, channel, callbackUrl = "", endTime = "", startTime = "") {
+  async sendDataSms(
+    phoneNumber,
+    message,
+    senderId,
+    channel,
+    callbackUrl = "",
+    endTime = "",
+    startTime = ""
+  ) {
     const finalSenderId = senderId || process.env.ADA_DEFAULT_SENDER_ID;
     const finalChannel = channel || process.env.ADA_DEFAULT_CHANNEL || "1";
 
@@ -235,7 +296,7 @@ class AdaClient {
     }
 
     const payload = {
-      msisdn: phoneNumber,
+      msisdn: this._normalizePhone(phoneNumber),
       channel: String(finalChannel),
       mt_port: finalSenderId,
       s_time: finalStartTime,
@@ -244,7 +305,8 @@ class AdaClient {
       callback_url: callbackUrl || ".",
     };
 
-    const dataUrl = process.env.ADA_DATA_SMS_URL || "/sms-campaign/data/send-sms";
+    const dataUrl =
+      process.env.ADA_DATA_SMS_URL || "/sms-campaign/data/send-sms";
     return this._request("post", dataUrl, payload);
   }
 
