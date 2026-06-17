@@ -29,7 +29,7 @@ const ERROR_CODES = {
   100: {
     message: "SMS sent successfully.",
     severity: "success",
-    action: "Use get_delivery_status to track delivery progress.",
+    action: "No action required.",
     retryable: false,
   },
   101: {

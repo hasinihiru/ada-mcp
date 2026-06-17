@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -17,7 +18,6 @@ import {
 } from "./validators.js";
 import {
   formatSmsResponse,
-  formatDeliveryStatusResponse,
   formatValidationError,
   formatExecutionError,
 } from "./responseFormatter.js";
@@ -48,7 +48,6 @@ ADA Digital Reach is an enterprise SMS gateway serving Sri Lanka. It supports:
 - **Standard SMS** — Plain text messages via mobile networks (channel 61)
 - **Data Campaign SMS** — Unicode/Sinhala-capable messages via data channels (channel 55)
 - Both **single** and **bulk** sending modes
-- **Delivery tracking** via campaign IDs
 
 ## Available Tools
 
@@ -75,10 +74,6 @@ Send a data campaign SMS to MULTIPLE numbers. Supports Unicode/Sinhala text.
 - Best for: Bulk Sinhala messages, large campaign blasts
 - Channel: 55 (data campaign)
 
-### 5. get_delivery_status
-Check whether an SMS campaign was delivered successfully.
-- Requires a campaign ID (returned when you send an SMS)
-
 ## Phone Number Format
 All phone numbers MUST be Sri Lankan mobile numbers in this format:
 - **Required format**: 94XXXXXXXXX (e.g., 94771234567)
@@ -93,9 +88,8 @@ All phone numbers MUST be Sri Lankan mobile numbers in this format:
 1. **Always confirm before sending** — Ask the user to verify the phone number and message before sending
 2. **Validate phone numbers** — Ensure numbers look like valid Sri Lankan mobiles
 3. **Use data campaigns for Sinhala** — Standard SMS (channel 61) doesn't support Unicode; use data campaigns (channel 55)
-4. **Track delivery** — After sending, offer to check delivery status using the campaign ID
-5. **Handle errors gracefully** — If sending fails, explain the error clearly and suggest fixes
-6. **Respect wallet balance** — If you see error codes 114/115, stop sending and alert the user about insufficient balance
+4. **Handle errors gracefully** — If sending fails, explain the error clearly and suggest fixes
+5. **Respect wallet balance** — If you see error codes 114/115, stop sending and alert the user about insufficient balance
 
 ## Error Handling
 The system provides clear error messages. Key error codes:
@@ -305,25 +299,6 @@ const tools = [
       required: ["phoneNumbers", "message"],
     },
   },
-  {
-    name: "get_delivery_status",
-    description:
-      "Check the delivery status of a previously sent SMS campaign via ADA Digital Reach. " +
-      "Use the campaign ID that was returned when you sent the SMS. " +
-      "This shows how many messages were delivered, failed, or are still pending.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        campaignId: {
-          type: "string",
-          description:
-            "The campaign ID returned from a previous send_single_sms, send_bulk_sms, " +
-            "send_data_sms, or send_data_bulk_sms call. This is the unique identifier for the campaign.",
-        },
-      },
-      required: ["campaignId"],
-    },
-  },
 ];
 
 // ─── Tool Handlers ──────────────────────────────────────────────────────────
@@ -348,9 +323,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "send_data_bulk_sms":
         return await _handleSendDataBulkSms(args);
-
-      case "get_delivery_status":
-        return await _handleGetDeliveryStatus(args);
 
       default:
         return _errorResponse(`Unknown tool: "${name}". Available tools: ${tools.map((t) => t.name).join(", ")}`);
@@ -598,20 +570,7 @@ async function _handleSendDataBulkSms(args) {
   );
 }
 
-async function _handleGetDeliveryStatus(args) {
-  if (!args.campaignId || typeof args.campaignId !== "string" || args.campaignId.trim().length === 0) {
-    return _errorResponse(
-      formatValidationError(
-        "get_delivery_status",
-        "Campaign ID is required. Provide the ID returned from a previous SMS send operation."
-      )
-    );
-  }
 
-  const result = await adaClient.getDeliveryStatus(args.campaignId.trim());
-
-  return _successResponse(formatDeliveryStatusResponse(result));
-}
 
 // ─── Response Helpers ───────────────────────────────────────────────────────
 

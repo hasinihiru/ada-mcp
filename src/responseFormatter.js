@@ -103,12 +103,6 @@ export function formatSmsResponse(toolName, apiResult, context = {}) {
   // Next steps
   lines.push("");
   lines.push("📋 Next Steps:");
-  const trackingId = refId || campId;
-  if (trackingId) {
-    lines.push(
-      `   • Track delivery: use get_delivery_status with campaign ID "${trackingId}"`
-    );
-  }
   lines.push("   • Send another message using any of the SMS tools");
 
   // Include raw response for transparency
@@ -153,53 +147,7 @@ export function formatApiErrorResponse(toolName, apiResult) {
   return lines.join("\n");
 }
 
-// ─── Delivery Status Response ───────────────────────────────────────────────
 
-/**
- * Format a delivery status check response.
- *
- * @param {object} apiResult — Raw API response data.
- * @returns {string}
- */
-export function formatDeliveryStatusResponse(apiResult) {
-  const lines = [];
-
-  lines.push("📊 Delivery Status Report");
-  lines.push(divider());
-
-  const campId = apiResult?.camp_id || apiResult?.campaign_id || apiResult?.campaignId || null;
-  const refId = apiResult?.ref_id || apiResult?.reference_id || apiResult?.referenceId || null;
-
-  if (campId) {
-    lines.push(`🆔 Campaign ID: ${campId}`);
-  }
-  if (refId) {
-    lines.push(`🔑 Reference ID: ${refId}`);
-  }
-
-  if (apiResult?.status) {
-    lines.push(`📌 Status: ${apiResult.status}`);
-  }
-
-  if (apiResult?.delivered !== undefined) {
-    lines.push(`✅ Delivered: ${apiResult.delivered}`);
-  }
-  if (apiResult?.failed !== undefined) {
-    lines.push(`❌ Failed: ${apiResult.failed}`);
-  }
-  if (apiResult?.pending !== undefined) {
-    lines.push(`⏳ Pending: ${apiResult.pending}`);
-  }
-  if (apiResult?.total !== undefined) {
-    lines.push(`📱 Total: ${apiResult.total}`);
-  }
-
-  lines.push("");
-  lines.push("📦 Raw API Response:");
-  lines.push(JSON.stringify(apiResult, null, 2));
-
-  return lines.join("\n");
-}
 
 // ─── Validation Error Response ──────────────────────────────────────────────
 
@@ -258,11 +206,10 @@ export function formatExecutionError(toolName, error) {
 // ─── Internal Helpers ───────────────────────────────────────────────────────
 
 const TOOL_ACTION_MAP = {
-  send_single_sms: "Single Send",
-  send_bulk_sms: "Bulk Send",
+  send_single_sms: "Single SMS Send",
+  send_bulk_sms: "Bulk SMS Send",
   send_data_sms: "Data Campaign Send",
   send_data_bulk_sms: "Data Campaign Bulk Send",
-  get_delivery_status: "Delivery Status Check",
 };
 
 function _friendlyToolAction(toolName) {

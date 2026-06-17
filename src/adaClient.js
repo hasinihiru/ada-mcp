@@ -309,11 +309,6 @@ class AdaClient {
       process.env.ADA_DATA_SMS_URL || "/sms-campaign/data/send-sms";
     return this._request("post", dataUrl, payload);
   }
-
-  async getDeliveryStatus(campaignId) {
-    const deliveryUrl = process.env.ADA_DELIVERY_URL || "/delivery-status";
-    return this._request("get", deliveryUrl, null, { campaignId });
-  }
 }
 
 export default new AdaClient();

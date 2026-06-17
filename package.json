@@ -1,8 +1,11 @@
 {
     "name": "ada-digital-reach-mcp-server",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "AI-optimized MCP Server for ADA Digital Reach SMS APIs with rich descriptions, validation, and structured responses",
     "main": "src/index.js",
+    "bin": {
+        "ada-digital-reach-mcp-server": "src/index.js"
+    },
     "type": "module",
     "scripts": {
         "start": "node src/index.js",
