@@ -9,14 +9,18 @@
     "type": "module",
     "scripts": {
         "start": "node src/index.js",
-        "dev": "node --watch src/index.js"
+        "start:http": "cross-env TRANSPORT=http node src/index.js",
+        "dev": "node --watch src/index.js",
+        "dev:http": "cross-env TRANSPORT=http node --watch src/index.js"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.0.0",
         "axios": "^1.12.2",
-        "dotenv": "^16.0.3"
+        "dotenv": "^16.0.3",
+        "express": "^5.2.1"
     },
     "devDependencies": {
+        "cross-env": "^10.1.0",
         "nodemon": "^3.0.0"
     }
 }

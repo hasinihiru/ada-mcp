@@ -22,20 +22,37 @@ import {
   formatExecutionError,
 } from "./responseFormatter.js";
 
-// ─── Server Initialization ──────────────────────────────────────────────────
+// ─── Server Factory ─────────────────────────────────────────────────────────
 
-const server = new Server(
-  {
-    name: "ada-digital-reach-mcp-server",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-      resources: {},
+/**
+ * Creates and configures an MCP Server instance with all tool and resource
+ * handlers registered. The returned server is transport-agnostic — connect it
+ * to StdioServerTransport (local) or StreamableHTTPServerTransport (remote).
+ */
+export function createMcpServer() {
+  const server = new Server(
+    {
+      name: "ada-digital-reach-mcp-server",
+      version: "2.0.1",
     },
-  }
-);
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+      },
+    }
+  );
+
+  // Register all handlers on this server instance
+  _registerHandlers(server);
+
+  return server;
+}
+
+/**
+ * Registers tool and resource handlers on the given MCP server.
+ */
+function _registerHandlers(server) {
 
 // ─── System Prompt Resource ─────────────────────────────────────────────────
 
@@ -373,6 +390,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
   throw new Error(`Unknown resource: ${uri}`);
 });
+} // end _registerHandlers
 
 // ─── Tool Handler Implementations ───────────────────────────────────────────
 
@@ -590,9 +608,19 @@ function _errorResponse(text) {
 // ─── Server Start ───────────────────────────────────────────────────────────
 
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error("ADA Digital Reach MCP Server v2.0.0 running on stdio");
+  const transportMode = (process.env.TRANSPORT || "stdio").toLowerCase();
+
+  if (transportMode === "http") {
+    // Remote HTTP mode — for Claude.ai custom connector and other remote clients
+    const { startHttpServer } = await import("./httpServer.js");
+    await startHttpServer();
+  } else {
+    // Local stdio mode — for IDE integrations and local MCP clients
+    const server = createMcpServer();
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("ADA Digital Reach MCP Server v2.0.1 running on stdio");
+  }
 }
 
 main().catch(console.error);
