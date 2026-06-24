@@ -68,23 +68,25 @@ function authMiddleware(req, res, next) {
     return next();
   }
 
+  // 1. Check Authorization header
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Missing Authorization header. Use: Bearer <token>",
-    });
+  if (authHeader) {
+    const [scheme, token] = authHeader.split(" ");
+    if (scheme === "Bearer" && token === expectedToken) {
+      return next();
+    }
   }
 
-  const [scheme, token] = authHeader.split(" ");
-  if (scheme !== "Bearer" || token !== expectedToken) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Invalid bearer token.",
-    });
+  // 2. Check query parameter fallback (for Claude.ai Custom Connector compatibility)
+  const queryToken = req.query.token;
+  if (queryToken && queryToken === expectedToken) {
+    return next();
   }
 
-  next();
+  return res.status(401).json({
+    error: "Unauthorized",
+    message: "Invalid or missing token. Provide a Bearer token in the Authorization header or use the ?token= query parameter.",
+  });
 }
 
 // ─── MCP Endpoint (Streamable HTTP) ─────────────────────────────────────────
