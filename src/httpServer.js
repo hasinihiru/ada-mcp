@@ -136,249 +136,321 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Authorize Claude — ADA Digital Reach</title>
+  <title>Sign In - ADA Reach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0B0E14;
-      --card-bg: rgba(20, 24, 33, 0.6);
-      --primary: #6366F1;
-      --primary-hover: #4F46E5;
-      --text: #F3F4F6;
-      --text-muted: #9CA3AF;
-      --border: rgba(255, 255, 255, 0.08);
-      --error: #EF4444;
-      --success: #10B981;
+      --bg-color: #eef2f6;
+      --card-bg: #ffffff;
+      --primary: #0b72a6;
+      --primary-hover: #095c86;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --border-focus: #0b72a6;
+      --error-color: #d32f2f;
+      --error-bg: #fde8e8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      margin: 0;
-      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background-color: var(--bg-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: var(--text-main);
+    }
+
+    .main-container {
+      flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
-      background-color: var(--bg);
-      background-image: 
-        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
-        radial-gradient(at 50% 0%, hsla(225,39%,30%,0.2) 0, transparent 50%),
-        radial-gradient(at 100% 100%, hsla(263,45%,20%,0.15) 0, transparent 50%);
-      font-family: 'Outfit', sans-serif;
-      color: var(--text);
-    }
-
-    .container {
-      width: 100%;
-      max-width: 460px;
       padding: 24px;
     }
 
-    .card {
+    .login-card {
       background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 40px 32px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
-
-    .logo-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 32px;
-    }
-
-    .logo-icon {
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, var(--primary), #EC4899);
-      border-radius: 16px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 28px;
-      color: white;
-      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
-      margin-bottom: 16px;
-    }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin: 0 0 8px 0;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 450px;
+      padding: 40px;
+      box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(0, 0, 0, 0.08);
       text-align: center;
-      background: linear-gradient(to right, #F3F4F6, #D1D5DB);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-container {
+      margin-bottom: 24px;
+    }
+
+    .logo-img {
+      height: 48px;
+      object-fit: contain;
+    }
+
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
     }
 
     .subtitle {
       font-size: 14px;
       color: var(--text-muted);
-      margin: 0;
-      text-align: center;
-    }
-
-    .desc {
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--text-muted);
-      margin-bottom: 28px;
-      text-align: center;
-    }
-
-    .permissions-list {
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 28px;
-      border: 1px solid var(--border);
-    }
-
-    .permission-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 13.5px;
-      margin-bottom: 12px;
-    }
-
-    .permission-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .permission-check {
-      color: var(--success);
-      font-size: 16px;
+      margin-bottom: 32px;
     }
 
     .error-msg {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.2);
-      border-radius: 10px;
+      background-color: var(--error-bg);
+      border: 1px solid rgba(211, 47, 47, 0.2);
+      border-radius: 8px;
       padding: 12px;
-      font-size: 13.5px;
-      color: var(--error);
-      margin-bottom: 20px;
-      text-align: center;
+      font-size: 14px;
+      color: var(--error-color);
+      margin-bottom: 24px;
+      text-align: left;
     }
 
     .form-group {
-      margin-bottom: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+      margin-bottom: 20px;
+      text-align: left;
     }
 
-    .input-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    label {
+    .form-label {
       display: block;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
+      color: var(--text-main);
+      margin-bottom: 8px;
     }
 
-    input[type="text"], input[type="password"] {
+    .input-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
       width: 100%;
-      box-sizing: border-box;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 16px;
-      color: white;
-      font-family: inherit;
+      padding: 12px 14px;
       font-size: 15px;
+      font-family: inherit;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    input[type="text"]:focus, input[type="password"]:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    .form-input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(11, 114, 166, 0.2);
     }
 
-    .btn-group {
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
+
+    .password-toggle:hover {
+      color: var(--text-main);
+    }
+
+    .remember-forgot-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .remember-me input {
+      cursor: pointer;
+      accent-color: var(--primary);
+      width: 16px;
+      height: 16px;
+    }
+
+    .forgot-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .forgot-link:hover {
+      text-decoration: underline;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-bottom: 24px;
+    }
+
+    .submit-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .register-divider {
+      display: flex;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .register-divider::before,
+    .register-divider::after {
+      content: "";
+      flex: 1;
+      border-bottom: 1px solid #cbd5e1;
+    }
+
+    .register-divider::before {
+      margin-right: 12px;
+    }
+
+    .register-divider::after {
+      margin-left: 12px;
+    }
+
+    .register-btn {
+      width: 100%;
+      padding: 10px;
+      background-color: #ffffff;
+      color: #334155;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s, border-color 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .register-btn:hover {
+      background-color: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    /* Footer Band styling */
+    .footer-band {
+      background-color: #d6e4f0;
+      padding: 32px 48px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      font-size: 14px;
+      color: #334155;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    @media (min-width: 768px) {
+      .footer-band {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .footer-left {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-    button {
+    .footer-logo {
+      height: 32px;
+      align-self: flex-start;
+    }
+
+    .footer-divider {
+      height: 1px;
+      background-color: rgba(255, 255, 255, 0.4);
       width: 100%;
-      padding: 14px;
-      border-radius: 10px;
-      border: none;
-      font-family: inherit;
-      font-size: 15px;
+    }
+
+    .copyright {
+      color: #334155;
+    }
+
+    .copyright-link {
+      color: #334155;
+      text-decoration: none;
       font-weight: 500;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), #4F46E5);
-      color: white;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    .copyright-link:hover {
+      text-decoration: underline;
     }
 
-    .btn-primary:hover {
-      background: linear-gradient(135deg, var(--primary-hover), #4338CA);
+    .social-links {
+      display: flex;
+      gap: 16px;
     }
 
-    .btn-primary:active {
-      transform: scale(0.98);
+    .social-icon {
+      color: #334155;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: rgba(255, 255, 255, 0.4);
+      transition: background-color 0.2s;
     }
 
-    .btn-secondary {
-      background: transparent;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.03);
-      color: white;
+    .social-icon:hover {
+      background-color: rgba(255, 255, 255, 0.8);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <div class="logo-area">
-        <div class="logo-icon">💬</div>
-        <h1>ADA Digital Reach</h1>
-        <p class="subtitle">AI Connection Request</p>
+  <div class="main-container">
+    <div class="login-card">
+      <div class="logo-container">
+        <img class="logo-img" src="https://adareach.adeonatech.net/logo192.png" alt="ADA Logo">
       </div>
-
-      <p class="desc">
-        An AI assistant (Claude) wants permission to access your ADA SMS gateway. This will enable it to:
-      </p>
-
-      <div class="permissions-list">
-        <div class="permission-item">
-          <span class="permission-check">✓</span>
-          <span>Send single SMS messages to recipients</span>
-        </div>
-        <div class="permission-item">
-          <span class="permission-check">✓</span>
-          <span>Send bulk SMS campaigns</span>
-        </div>
-        <div class="permission-item">
-          <span class="permission-check">✓</span>
-          <span>Send Unicode (Sinhala/Tamil) data campaigns</span>
-        </div>
-      </div>
+      <h1 class="title">Hi, Welcome Back</h1>
+      <p class="subtitle">Enter your credentials to continue</p>
 
       <form action="/oauth/approve" method="POST">
         <!-- Hidden params passed from authorize -->
@@ -391,27 +463,73 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
         ${errorHtml}
 
         <div class="form-group">
-          <div class="input-wrapper">
-            <label for="ada_username">ADA Gateway Username</label>
-            <input type="text" id="ada_username" name="ada_username" placeholder="testapiuser" value="${adaUsername}" required>
-          </div>
-          <div class="input-wrapper">
-            <label for="ada_password">ADA Gateway Password</label>
-            <input type="password" id="ada_password" name="ada_password" placeholder="••••••••" required>
-          </div>
-          <div class="input-wrapper">
-            <label for="client_secret">Client Secret</label>
-            <input type="password" id="client_secret" name="client_secret" placeholder="••••••••••••••••" required>
+          <label class="form-label" for="ada_username">Username</label>
+          <div class="input-container">
+            <input class="form-input" type="text" id="ada_username" name="ada_username" placeholder="testapiuser" value="${adaUsername}" required autocomplete="username">
           </div>
         </div>
 
-        <div class="btn-group">
-          <button type="submit" class="btn-primary">Authorize Agent</button>
-          <button type="button" class="btn-secondary" onclick="window.location.href='${redirectUri}?error=access_denied&state=${state}'">Deny Access</button>
+        <div class="form-group">
+          <label class="form-label" for="ada_password">Password</label>
+          <div class="input-container">
+            <input class="form-input" type="password" id="ada_password" name="ada_password" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
+              <!-- Eye open icon SVG -->
+              <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        <div class="remember-forgot-row">
+          <label class="remember-me">
+            <input type="checkbox" name="remember"> Keep me logged in
+          </label>
+          <a class="forgot-link" href="https://adareach.adeonatech.net/forgot-password" target="_blank">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="submit-btn">Sign In</button>
+
+        <div class="register-divider">Don't have an account?</div>
+        <a class="register-btn" href="https://adareach.adeonatech.net/register" target="_blank">Register Here</a>
       </form>
     </div>
   </div>
+
+  <footer class="footer-band">
+    <div class="footer-left">
+      <img class="footer-logo" src="https://adareach.adeonatech.net/logo192.png" alt="ADA Logo">
+      <div class="footer-divider"></div>
+      <p class="copyright">
+        &copy; 2026 Copyright: <a class="copyright-link" href="https://adaglobal-legal.com/reach-sl/" target="_blank">ADA Digital Singapore PTE. (LTD).</a> All Rights Reserved.
+      </p>
+    </div>
+    <div class="social-links">
+      <a class="social-icon" href="https://www.adaglobal.com/offices/srilanka" target="_blank" aria-label="Website">🌐</a>
+      <a class="social-icon" href="https://www.facebook.com/weareadaglobal" target="_blank" aria-label="Facebook">FB</a>
+      <a class="social-icon" href="https://www.instagram.com/adaasia.lk/?hl=en" target="_blank" aria-label="Instagram">IG</a>
+      <a class="social-icon" href="https://www.youtube.com/@weareadaglobal" target="_blank" aria-label="YouTube">YT</a>
+      <a class="social-icon" href="https://www.linkedin.com/company/weareada/?originalSubdomain=my" target="_blank" aria-label="LinkedIn">IN</a>
+    </div>
+  </footer>
+
+  <script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById('ada_password');
+      const eyeIcon = document.getElementById('eye-icon');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        // Change to Eye Closed icon SVG
+        eyeIcon.innerHTML = \`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />\`;
+      } else {
+        passwordInput.type = 'password';
+        // Change to Eye Open icon SVG
+        eyeIcon.innerHTML = \`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />\`;
+      }
+    }
+  </script>
 </body>
 </html>`;
 }
@@ -499,29 +617,14 @@ app.post("/oauth/approve", async (req, res) => {
     state,
     code_challenge,
     code_challenge_method,
-    client_secret,
     ada_username,
     ada_password
   } = req.body;
 
   const expectedClientId = process.env.MCP_CLIENT_ID;
-  const expectedClientSecret = process.env.MCP_CLIENT_SECRET;
 
   if (client_id !== expectedClientId) {
     return res.status(400).send("Invalid client ID.");
-  }
-
-  if (!client_secret || client_secret !== expectedClientSecret) {
-    const html = renderConsentPage(
-      client_id,
-      redirect_uri,
-      state || "",
-      code_challenge,
-      code_challenge_method,
-      "Invalid Client Secret. Please verify and try again.",
-      ada_username || ""
-    );
-    return res.status(401).send(html);
   }
 
   if (!ada_username || !ada_password) {
@@ -581,14 +684,12 @@ app.post("/oauth/token", (req, res) => {
     code,
     redirect_uri,
     client_id,
-    client_secret,
     code_verifier
   } = req.body;
 
   const expectedClientId = process.env.MCP_CLIENT_ID;
-  const expectedClientSecret = process.env.MCP_CLIENT_SECRET;
 
-  if (client_id !== expectedClientId || client_secret !== expectedClientSecret) {
+  if (client_id !== expectedClientId) {
     return res.status(401).json({
       error: "invalid_client",
       error_description: "Invalid client credentials."
