@@ -99,8 +99,8 @@ function authMiddleware(req, res, next) {
     token = req.query.token;
   }
 
-  // If no auth is required (no static token and no sessions), pass through
-  if (!expectedToken && userSessions.size === 0) {
+  // If no auth is required (neither static token nor client id is configured), pass through
+  if (!expectedToken && !process.env.MCP_CLIENT_ID) {
     return next();
   }
 
