@@ -99,8 +99,8 @@ function authMiddleware(req, res, next) {
     token = req.query.token;
   }
 
-  // If no auth is required (neither static token nor client id is configured), pass through
-  if (!expectedToken && !process.env.MCP_CLIENT_ID) {
+  // If no auth is required (neither static token is configured nor is HTTP transport active), pass through
+  if (!expectedToken && process.env.TRANSPORT !== "http") {
     return next();
   }
 
@@ -545,13 +545,8 @@ app.get("/oauth/authorize", (req, res) => {
     code_challenge_method
   } = req.query;
 
-  const expectedClientId = process.env.MCP_CLIENT_ID;
-  if (!expectedClientId) {
-    return res.status(500).send("OAuth server is not configured. MCP_CLIENT_ID is missing.");
-  }
-
-  if (client_id !== expectedClientId) {
-    return res.status(400).send(`Invalid client_id: "${client_id}"`);
+  if (!client_id) {
+    return res.status(400).send("Missing client_id.");
   }
 
   if (response_type !== "code") {
@@ -593,10 +588,8 @@ app.post("/oauth/approve", async (req, res) => {
     ada_password
   } = req.body;
 
-  const expectedClientId = process.env.MCP_CLIENT_ID;
-
-  if (client_id !== expectedClientId) {
-    return res.status(400).send("Invalid client ID.");
+  if (!client_id) {
+    return res.status(400).send("Missing client_id.");
   }
 
   if (!ada_username || !ada_password) {
@@ -659,12 +652,10 @@ app.post("/oauth/token", (req, res) => {
     code_verifier
   } = req.body;
 
-  const expectedClientId = process.env.MCP_CLIENT_ID;
-
-  if (client_id !== expectedClientId) {
-    return res.status(401).json({
-      error: "invalid_client",
-      error_description: "Invalid client credentials."
+  if (!client_id) {
+    return res.status(400).json({
+      error: "invalid_request",
+      error_description: "Missing client_id."
     });
   }
 
