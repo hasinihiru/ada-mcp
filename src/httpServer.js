@@ -48,9 +48,11 @@ app.get([
     issuer: baseUrl,
     authorization_endpoint: `${baseUrl}/oauth/authorize`,
     token_endpoint: `${baseUrl}/oauth/token`,
+    registration_endpoint: `${baseUrl}/oauth/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
-    code_challenge_methods_supported: ["S256"]
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: ["none"]
   });
 });
 
@@ -703,6 +705,24 @@ app.post("/oauth/token", (req, res) => {
     access_token: accessToken,
     token_type: "Bearer",
     expires_in: 315360000
+  });
+});
+
+// 4. Dynamic Client Registration Endpoint (RFC 7591)
+app.post("/oauth/register", (req, res) => {
+  const {
+    redirect_uris,
+    token_endpoint_auth_method
+  } = req.body;
+
+  // Generate a random client ID
+  const clientId = crypto.randomBytes(16).toString("hex");
+
+  res.status(201).json({
+    client_id: clientId,
+    client_id_issued_at: Math.floor(Date.now() / 1000),
+    redirect_uris: redirect_uris || [],
+    token_endpoint_auth_method: token_endpoint_auth_method || "none"
   });
 });
 
