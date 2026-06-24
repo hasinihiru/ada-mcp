@@ -126,7 +126,7 @@ function authMiddleware(req, res, next) {
 
 // ─── OAuth 2.1 (PKCE) Implementation ────────────────────────────────────────
 
-function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChallengeMethod, errorMsg = "", adaUsername = "") {
+function renderConsentPage(redirectUri, state, codeChallenge, codeChallengeMethod, errorMsg = "", adaUsername = "") {
   let usernameErrorText = "";
   let passwordErrorText = "";
   let usernameErrorClass = "";
@@ -443,7 +443,6 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 
     <form action="/oauth/approve" method="POST">
       <!-- Hidden params passed from authorize -->
-      <input type="hidden" name="client_id" value="${clientId}">
       <input type="hidden" name="redirect_uri" value="${redirectUri}">
       <input type="hidden" name="state" value="${state}">
       <input type="hidden" name="code_challenge" value="${codeChallenge}">
@@ -538,16 +537,11 @@ function verifyPKCE(verifier, challenge) {
 app.get("/oauth/authorize", (req, res) => {
   const {
     response_type,
-    client_id,
     redirect_uri,
     state,
     code_challenge,
     code_challenge_method
   } = req.query;
-
-  if (!client_id) {
-    return res.status(400).send("Missing client_id.");
-  }
 
   if (response_type !== "code") {
     return res.status(400).send("Unsupported response_type. Only 'code' is supported.");
@@ -566,7 +560,6 @@ app.get("/oauth/authorize", (req, res) => {
   }
 
   const html = renderConsentPage(
-    client_id,
     redirect_uri,
     state || "",
     code_challenge,
@@ -579,7 +572,6 @@ app.get("/oauth/authorize", (req, res) => {
 // 2. Approval Submission Endpoint
 app.post("/oauth/approve", async (req, res) => {
   const {
-    client_id,
     redirect_uri,
     state,
     code_challenge,
@@ -588,13 +580,8 @@ app.post("/oauth/approve", async (req, res) => {
     ada_password
   } = req.body;
 
-  if (!client_id) {
-    return res.status(400).send("Missing client_id.");
-  }
-
   if (!ada_username || !ada_password) {
     const html = renderConsentPage(
-      client_id,
       redirect_uri,
       state || "",
       code_challenge,
@@ -608,7 +595,6 @@ app.post("/oauth/approve", async (req, res) => {
   const isAdaCredsValid = await validateAdaCredentials(ada_username, ada_password);
   if (!isAdaCredsValid) {
     const html = renderConsentPage(
-      client_id,
       redirect_uri,
       state || "",
       code_challenge,
@@ -624,7 +610,6 @@ app.post("/oauth/approve", async (req, res) => {
 
   // Cache the authorization code details
   authCodes.set(authCode, {
-    client_id,
     redirect_uri,
     code_challenge,
     code_challenge_method,
@@ -648,16 +633,8 @@ app.post("/oauth/token", (req, res) => {
     grant_type,
     code,
     redirect_uri,
-    client_id,
     code_verifier
   } = req.body;
-
-  if (!client_id) {
-    return res.status(400).json({
-      error: "invalid_request",
-      error_description: "Missing client_id."
-    });
-  }
 
   if (grant_type !== "authorization_code") {
     return res.status(400).json({
