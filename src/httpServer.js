@@ -463,16 +463,16 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
         ${errorHtml}
 
         <div class="form-group">
-          <label class="form-label" for="ada_username">Username</label>
+          <label class="form-label" for="outlined-adornment-username-login">Username</label>
           <div class="input-container">
-            <input class="form-input" type="text" id="ada_username" name="ada_username" placeholder="testapiuser" value="${adaUsername}" required autocomplete="username">
+            <input class="form-input" type="text" id="outlined-adornment-mobile-login" name="ada_username" placeholder="testapiuser" value="${adaUsername}" required autocomplete="username">
           </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="ada_password">Password</label>
+          <label class="form-label" for="outlined-adornment-password-login">Password</label>
           <div class="input-container">
-            <input class="form-input" type="password" id="ada_password" name="ada_password" placeholder="••••••••" required autocomplete="current-password">
+            <input class="form-input" type="password" id="outlined-adornment-password-login" name="ada_password" placeholder="••••••••" required autocomplete="current-password">
             <button type="button" class="password-toggle" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility">
               <!-- Eye open icon SVG -->
               <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -485,12 +485,12 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 
         <div class="remember-forgot-row">
           <label class="remember-me">
-            <input type="checkbox" name="remember"> Keep me logged in
+            <input type="checkbox" name="remember"> Remember me
           </label>
           <a class="forgot-link" href="https://adareach.adeonatech.net/forgot-password" target="_blank">Forgot Password?</a>
         </div>
 
-        <button type="submit" class="submit-btn">Sign In</button>
+        <button type="submit" class="submit-btn">Sign in</button>
 
         <div class="register-divider">Don't have an account?</div>
         <a class="register-btn" href="https://adareach.adeonatech.net/register" target="_blank">Register Here</a>
@@ -517,7 +517,7 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 
   <script>
     function togglePasswordVisibility() {
-      const passwordInput = document.getElementById('ada_password');
+      const passwordInput = document.getElementById('outlined-adornment-password-login');
       const eyeIcon = document.getElementById('eye-icon');
       if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
