@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { normalizePhoneNumber } from "./validators.js";
 import { getErrorEntry, isAuthError, isWalletError } from "./errorCodes.js";
+import { requestContext } from "./context.js";
 
 dotenv.config();
 
@@ -29,11 +30,23 @@ class AdaClient {
   constructor() {
     // Strip trailing slashes from base URL
     this.baseUrl = (process.env.ADA_BASE_URL || "").replace(/\/+$/, "");
-    this.username = process.env.ADA_USERNAME;
-    this.password = process.env.ADA_PASSWORD;
+    this.staticUsername = process.env.ADA_USERNAME;
+    this.staticPassword = process.env.ADA_PASSWORD;
     this.tokenUrl = process.env.ADA_TOKEN_URL;
-    this.token = null;
-    this.tokenExpiresAt = 0;
+    
+    // Cache tokens per user: username -> { token, expiresAt }
+    this.userTokens = new Map();
+  }
+
+  _getCredentials() {
+    const contextCreds = requestContext.getStore();
+    if (contextCreds && contextCreds.username && contextCreds.password) {
+      return contextCreds;
+    }
+    return {
+      username: this.staticUsername,
+      password: this.staticPassword
+    };
   }
 
   _buildUrl(endpointPath) {
@@ -43,24 +56,35 @@ class AdaClient {
   }
 
   async getToken(forceRefresh = false) {
-    if (!forceRefresh && this.token && Date.now() < this.tokenExpiresAt) {
-      return this.token;
+    const { username, password } = this._getCredentials();
+
+    if (!username || !password) {
+      throw new Error("No ADA Digital Reach credentials provided.");
+    }
+
+    const cached = this.userTokens.get(username);
+    if (!forceRefresh && cached && Date.now() < cached.expiresAt) {
+      return cached.token;
     }
 
     const targetUrl = this._buildUrl(this.tokenUrl);
     const response = await axios.post(targetUrl, {
-      u_name: this.username,
-      passwd: this.password,
+      u_name: username,
+      passwd: password,
     });
 
-    this.token = response.data?.access_token || response.data?.token;
-    if (!this.token) {
-      throw new Error("Failed to obtain authentication token from ADA");
+    const token = response.data?.access_token || response.data?.token;
+    if (!token) {
+      throw new Error(`Failed to obtain authentication token from ADA for user: ${username}`);
     }
 
     // Cache token for 24 hours
-    this.tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
-    return this.token;
+    this.userTokens.set(username, {
+      token,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000
+    });
+
+    return token;
   }
 
   /**
@@ -100,7 +124,8 @@ class AdaClient {
           // Auto-retry on auth errors (104/105)
           if (isAuthError(responseCode)) {
             if (!isRetry) {
-              this.token = null;
+              const { username } = this._getCredentials();
+              if (username) this.userTokens.delete(username);
               await this.getToken(true);
               isRetry = true;
               continue;
@@ -137,7 +162,8 @@ class AdaClient {
           const code = parseInt(errVal, 10);
 
           if (!isRetry && isAuthError(code)) {
-            this.token = null;
+            const { username } = this._getCredentials();
+            if (username) this.userTokens.delete(username);
             await this.getToken(true);
             isRetry = true;
             continue;

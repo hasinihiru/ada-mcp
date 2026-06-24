@@ -14,6 +14,8 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createMcpServer } from "./index.js";
 import crypto from "crypto";
+import { requestContext } from "./context.js";
+import axios from "axios";
 
 // ─── Express App Setup ──────────────────────────────────────────────────────
 
@@ -21,8 +23,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Authorization codes cache
+// Cache for OAuth authorization codes and user sessions
 const authCodes = new Map();
+const userSessions = new Map(); // token -> { username, password }
 
 // ─── Health Check & OAuth Discovery ─────────────────────────────────────────
 
@@ -83,23 +86,35 @@ function originValidation(req, res, next) {
 function authMiddleware(req, res, next) {
   const expectedToken = process.env.MCP_AUTH_TOKEN;
 
-  // If no token is configured, skip auth (development mode)
-  if (!expectedToken) {
+  // 1. Extract token from Authorization header or query parameter
+  let token = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const [scheme, val] = authHeader.split(" ");
+    if (scheme === "Bearer") {
+      token = val;
+    }
+  }
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
+
+  // If no auth is required (no static token and no sessions), pass through
+  if (!expectedToken && userSessions.size === 0) {
     return next();
   }
 
-  // 1. Check Authorization header
-  const authHeader = req.headers.authorization;
-  if (authHeader) {
-    const [scheme, token] = authHeader.split(" ");
-    if (scheme === "Bearer" && token === expectedToken) {
-      return next();
-    }
+  // 2. Validate token
+  if (expectedToken && token === expectedToken) {
+    // Matches static token — requestContext will run with undefined (falling back to static credentials)
+    res.locals.credentials = null;
+    return next();
   }
 
-  // 2. Check query parameter fallback (for Claude.ai Custom Connector compatibility)
-  const queryToken = req.query.token;
-  if (queryToken && queryToken === expectedToken) {
+  const session = userSessions.get(token);
+  if (session) {
+    // Matches dynamic session — store credentials in res.locals to be bound in the route context
+    res.locals.credentials = session;
     return next();
   }
 
@@ -111,7 +126,7 @@ function authMiddleware(req, res, next) {
 
 // ─── OAuth 2.1 (PKCE) Implementation ────────────────────────────────────────
 
-function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChallengeMethod, errorMsg = "") {
+function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChallengeMethod, errorMsg = "", adaUsername = "") {
   const errorHtml = errorMsg 
     ? `<div class="error-msg">${errorMsg}</div>` 
     : "";
@@ -254,19 +269,27 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 
     .form-group {
       margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     label {
       display: block;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      margin-bottom: 8px;
     }
 
-    input[type="password"] {
+    input[type="text"], input[type="password"] {
       width: 100%;
       box-sizing: border-box;
       background: rgba(0, 0, 0, 0.2);
@@ -280,7 +303,7 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    input[type="password"]:focus {
+    input[type="text"]:focus, input[type="password"]:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
     }
@@ -368,8 +391,18 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
         ${errorHtml}
 
         <div class="form-group">
-          <label for="client_secret">Enter Client Secret</label>
-          <input type="password" id="client_secret" name="client_secret" placeholder="••••••••••••••••" required>
+          <div class="input-wrapper">
+            <label for="ada_username">ADA Gateway Username</label>
+            <input type="text" id="ada_username" name="ada_username" placeholder="testapiuser" value="${adaUsername}" required>
+          </div>
+          <div class="input-wrapper">
+            <label for="ada_password">ADA Gateway Password</label>
+            <input type="password" id="ada_password" name="ada_password" placeholder="••••••••" required>
+          </div>
+          <div class="input-wrapper">
+            <label for="client_secret">Client Secret</label>
+            <input type="password" id="client_secret" name="client_secret" placeholder="••••••••••••••••" required>
+          </div>
         </div>
 
         <div class="btn-group">
@@ -381,6 +414,24 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
   </div>
 </body>
 </html>`;
+}
+
+// Helper to validate ADA credentials by making a test login request
+async function validateAdaCredentials(username, password) {
+  const baseUrl = (process.env.ADA_BASE_URL || "").replace(/\/+$/, "");
+  const tokenUrl = process.env.ADA_TOKEN_URL || "/login/api-based";
+  const targetUrl = `${baseUrl}/${tokenUrl.replace(/^\/+/, "")}`;
+
+  try {
+    const response = await axios.post(targetUrl, {
+      u_name: username,
+      passwd: password,
+    });
+    const token = response.data?.access_token || response.data?.token;
+    return !!token;
+  } catch (error) {
+    return false;
+  }
 }
 
 // Helper for PKCE verification
@@ -441,14 +492,16 @@ app.get("/oauth/authorize", (req, res) => {
 });
 
 // 2. Approval Submission Endpoint
-app.post("/oauth/approve", (req, res) => {
+app.post("/oauth/approve", async (req, res) => {
   const {
     client_id,
     redirect_uri,
     state,
     code_challenge,
     code_challenge_method,
-    client_secret
+    client_secret,
+    ada_username,
+    ada_password
   } = req.body;
 
   const expectedClientId = process.env.MCP_CLIENT_ID;
@@ -465,7 +518,35 @@ app.post("/oauth/approve", (req, res) => {
       state || "",
       code_challenge,
       code_challenge_method,
-      "Invalid Client Secret. Please verify and try again."
+      "Invalid Client Secret. Please verify and try again.",
+      ada_username || ""
+    );
+    return res.status(401).send(html);
+  }
+
+  if (!ada_username || !ada_password) {
+    const html = renderConsentPage(
+      client_id,
+      redirect_uri,
+      state || "",
+      code_challenge,
+      code_challenge_method,
+      "Please enter both your ADA Gateway Username and Password.",
+      ada_username || ""
+    );
+    return res.status(400).send(html);
+  }
+
+  const isAdaCredsValid = await validateAdaCredentials(ada_username, ada_password);
+  if (!isAdaCredsValid) {
+    const html = renderConsentPage(
+      client_id,
+      redirect_uri,
+      state || "",
+      code_challenge,
+      code_challenge_method,
+      "Invalid ADA Gateway credentials. Verification failed.",
+      ada_username || ""
     );
     return res.status(401).send(html);
   }
@@ -479,6 +560,8 @@ app.post("/oauth/approve", (req, res) => {
     redirect_uri,
     code_challenge,
     code_challenge_method,
+    ada_username,
+    ada_password,
     expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes validity
   });
 
@@ -566,7 +649,14 @@ app.post("/oauth/token", (req, res) => {
     });
   }
 
-  const accessToken = process.env.MCP_AUTH_TOKEN || "development-token";
+  // Generate a unique access token
+  const accessToken = crypto.randomBytes(32).toString("hex");
+
+  // Save user credentials mapped to this access token
+  userSessions.set(accessToken, {
+    username: cached.ada_username,
+    password: cached.ada_password
+  });
 
   res.json({
     access_token: accessToken,
@@ -582,64 +672,60 @@ app.use("/mcp", originValidation, authMiddleware);
 
 /**
  * POST /mcp — Main MCP request handler.
- *
- * Each request creates a fresh stateless transport + server pair.
- * This is the recommended approach for serverless / horizontally-scaled
- * deployments where you can't guarantee sticky sessions.
  */
 app.post("/mcp", async (req, res) => {
-  try {
-    const server = createMcpServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // Stateless — no session tracking
-    });
-
-    // Wire the server to this transport
-    await server.connect(transport);
-
-    // Let the transport handle the request/response
-    await transport.handleRequest(req, res, req.body);
-  } catch (error) {
-    console.error("[MCP HTTP] Error handling POST /mcp:", error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: "Internal Server Error",
-        message: "Failed to process MCP request.",
+  const credentials = res.locals.credentials;
+  requestContext.run(credentials, async () => {
+    try {
+      const server = createMcpServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
       });
+
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      console.error("[MCP HTTP] Error handling POST /mcp:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Internal Server Error",
+          message: "Failed to process MCP request.",
+        });
+      }
     }
-  }
+  });
 });
 
 /**
- * GET /mcp — SSE stream endpoint (for server-initiated notifications).
- * Required by the Streamable HTTP spec for bidirectional communication.
+ * GET /mcp — SSE stream endpoint.
  */
 app.get("/mcp", async (req, res) => {
-  try {
-    const server = createMcpServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-
-    await server.connect(transport);
-    await transport.handleRequest(req, res);
-  } catch (error) {
-    console.error("[MCP HTTP] Error handling GET /mcp:", error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: "Internal Server Error",
-        message: "Failed to establish SSE stream.",
+  const credentials = res.locals.credentials;
+  requestContext.run(credentials, async () => {
+    try {
+      const server = createMcpServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
       });
+
+      await server.connect(transport);
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      console.error("[MCP HTTP] Error handling GET /mcp:", error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          error: "Internal Server Error",
+          message: "Failed to establish SSE stream.",
+        });
+      }
     }
-  }
+  });
 });
 
 /**
- * DELETE /mcp — Session cleanup (no-op in stateless mode, but required
- * by the MCP spec for well-behaved clients).
+ * DELETE /mcp — Session cleanup.
  */
 app.delete("/mcp", async (req, res) => {
-  // In stateless mode, there's nothing to clean up
   res.status(200).json({ status: "ok" });
 });
 
