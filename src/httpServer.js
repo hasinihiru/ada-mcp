@@ -16,12 +16,14 @@ import { createMcpServer } from "./index.js";
 import crypto from "crypto";
 import { requestContext } from "./context.js";
 import axios from "axios";
+import path from "path";
 
 // ─── Express App Setup ──────────────────────────────────────────────────────
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/public", express.static(path.resolve("public")));
 
 // Cache for OAuth authorization codes and user sessions
 const authCodes = new Map();
@@ -466,7 +468,7 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
   <div class="main-container">
     <div class="login-card">
       <div class="logo-container">
-        <img class="logo-img" src="https://adareach.adeonatech.net/logo192.png" alt="ADA Logo">
+        <img class="logo-img" src="/public/logo.png" onerror="this.onerror=null; this.src='https://adareach.adeonatech.net/logo192.png'" alt="Logo">
       </div>
       <h1 class="title">Hi, Welcome Back</h1>
       <p class="subtitle">Enter your credentials to continue</p>
