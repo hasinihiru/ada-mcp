@@ -136,12 +136,14 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light only">
   <title>Sign In - ADA Reach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      color-scheme: light;
       --bg-color: #eef2f6;
       --card-bg: #ffffff;
       --primary: #0b72a6;
@@ -246,13 +248,14 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
       padding: 12px 14px;
       font-size: 15px;
       font-family: inherit;
-      background-color: #ffffff;
-      color: var(--text-main);
+      background-color: #ffffff !important;
+      color: #1e293b !important;
       border: 1px solid var(--border-color);
       border-radius: 8px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
       -webkit-appearance: none;
+      appearance: none;
     }
 
     .form-input::placeholder {
