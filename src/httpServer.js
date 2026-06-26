@@ -246,10 +246,26 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
       padding: 12px 14px;
       font-size: 15px;
       font-family: inherit;
+      background-color: #ffffff;
+      color: var(--text-main);
       border: 1px solid var(--border-color);
       border-radius: 8px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Prevent dark autofill backgrounds in Chrome/Edge */
+    .form-input:-webkit-autofill,
+    .form-input:-webkit-autofill:hover,
+    .form-input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+      -webkit-text-fill-color: var(--text-main) !important;
+      transition: background-color 5000s ease-in-out 0s;
     }
 
     .form-input:focus {
@@ -498,22 +514,7 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
     </div>
   </div>
 
-  <footer class="footer-band">
-    <div class="footer-left">
-      <img class="footer-logo" src="https://adareach.adeonatech.net/logo192.png" alt="ADA Logo">
-      <div class="footer-divider"></div>
-      <p class="copyright">
-        &copy; 2026 Copyright: <a class="copyright-link" href="https://adaglobal-legal.com/reach-sl/" target="_blank">ADA Digital Singapore PTE. (LTD).</a> All Rights Reserved.
-      </p>
-    </div>
-    <div class="social-links">
-      <a class="social-icon" href="https://www.adaglobal.com/offices/srilanka" target="_blank" aria-label="Website">🌐</a>
-      <a class="social-icon" href="https://www.facebook.com/weareadaglobal" target="_blank" aria-label="Facebook">FB</a>
-      <a class="social-icon" href="https://www.instagram.com/adaasia.lk/?hl=en" target="_blank" aria-label="Instagram">IG</a>
-      <a class="social-icon" href="https://www.youtube.com/@weareadaglobal" target="_blank" aria-label="YouTube">YT</a>
-      <a class="social-icon" href="https://www.linkedin.com/company/weareada/?originalSubdomain=my" target="_blank" aria-label="LinkedIn">IN</a>
-    </div>
-  </footer>
+ 
 
   <script>
     function togglePasswordVisibility() {
