@@ -52,8 +52,41 @@ app.get([
     token_endpoint: `${baseUrl}/oauth/token`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
-    code_challenge_methods_supported: ["S256"]
+    code_challenge_methods_supported: ["S256"],
+    logo_uri: `${baseUrl}/public/logo.png`,
+    client_name: "ADA Digital Reach MCP"
   });
+});
+
+// ─── Favicon & Root Metadata (for Claude Connector UI Icon) ─────────────────
+
+app.get(["/favicon.ico", "/apple-touch-icon.png"], (_req, res) => {
+  res.sendFile(path.resolve("public", "logo.png"), (err) => {
+    if (err) {
+      res.status(404).send("Logo not found");
+    }
+  });
+});
+
+app.get("/", (req, res) => {
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADA Digital Reach MCP Server</title>
+  <link rel="icon" type="image/png" href="/public/logo.png">
+  <link rel="apple-touch-icon" href="/public/logo.png">
+  <meta property="og:title" content="ADA Digital Reach MCP Server">
+  <meta property="og:image" content="${baseUrl}/public/logo.png">
+</head>
+<body style="font-family: sans-serif; padding: 40px; text-align: center; background: #eef2f6;">
+  <img src="/public/logo.png" onerror="this.onerror=null; this.src='https://adareach.adeonatech.net/logo192.png'" style="height: 80px; margin-bottom: 20px;" alt="Logo">
+  <h1>ADA Digital Reach MCP Server</h1>
+  <p>Server is running successfully. Connect this endpoint to Claude.ai.</p>
+</body>
+</html>`);
 });
 
 // ─── Origin Validation Middleware ───────────────────────────────────────────
@@ -140,6 +173,8 @@ function renderConsentPage(clientId, redirectUri, state, codeChallenge, codeChal
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light only">
   <title>Sign In - ADA Reach</title>
+  <link rel="icon" type="image/png" href="/public/logo.png">
+  <link rel="apple-touch-icon" href="/public/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
